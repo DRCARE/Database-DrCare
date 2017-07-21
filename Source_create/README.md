@@ -6,9 +6,9 @@ CREATE DATABASE [DRCARE] ON PRIMARY
 (
 	NAME = 'DrCare',
 	
-	# CHANGE THIS
+	## CHANGE THIS
 	FILENAME =  'E:\Android\CODERSCHOOL\PROJECT\DrCare.mdf',
-	##
+	*end
 	
 	SIZE = 4MB,
 	
@@ -21,9 +21,9 @@ LOG ON
 (
 	NAME ='DrCare_log',
 	
-	# CHANGE THIS
-	FILENAME = 'E:\Android\CODERSCHOOL\PROJECT\DrCare.ldf', *CHANGE THIS
-	##
+	##CHANGE THIS
+	FILENAME = 'E:\Android\CODERSCHOOL\PROJECT\DrCare.ldf', 
+	*end
 	
 	SIZE = 1024KB,
 	
