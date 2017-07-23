@@ -75,7 +75,7 @@ CREATE TABLE REMIND
 	isRepeat int NOT NULL,
 	Sound varchar(30),
 	Label varchar(50),
-	isActivate bit,
+	isActivate BIT DEFAULT 1,
 	CONSTRAINT pk_remindID PRIMARY KEY (RemindID),
 	CONSTRAINT fk_Remind_isRepeat FOREIGN KEY (isRepeat)
 		REFERENCES REPEAT_CATEGORY(RepeatID)
@@ -89,6 +89,7 @@ CREATE TABLE MEDICAL_RECORD_DETAILS
 	DoctorID int NOT NULL,
 	Symptoms nvarchar(200),
 	DayCreated datetime,
+	isTaken BIT DEFAULT 0,
 	CONSTRAINT pk_mecRcDetailsID PRIMARY KEY (MecRcDetailsID),
 	CONSTRAINT fk_MecRecDt_mecRecId FOREIGN KEY (MecRcID)
 		REFERENCES USER_DrCare(UserID),
@@ -809,4 +810,52 @@ VALUES  ( 3, -- MÃ THUỐC - int
           '0.5mg'  -- Hàm lượng - varchar(20)
           )
 GO
+
+INSERT INTO dbo.MEDICAL_RECORD_DETAILS
+	        ( MecRcID ,
+	          DiseaseID ,
+	          DoctorID ,
+	          Symptoms ,
+	          DayCreated 
+	        )
+	VALUES  ( 11 , -- MecRcID - int
+	          3 , -- DiseaseID - int
+	          3, -- DoctorID - int
+	          N'Viêm họng cấp' , -- Symptoms - nvarchar(200)
+	          '19-Jun-2017'  -- DayCreated - datetime
+	        )
+GO
+
+INSERT INTO dbo.REMIND
+	        ( TimeRemind ,
+	          isRepeat ,
+	          Sound ,
+	          Label ,
+	          isActivate
+	        )
+	VALUES  ( '21:30' , -- TimeRemind - time(7)
+	          1 , -- isRepeat - int
+	          'Sound 2' , -- Sound - varchar(30)
+	          'remind night' , -- Label - varchar(50)
+	          1  -- isActivate - bit
+	        ),
+			( '13:30' , -- TimeRemind - time(7)
+	          1 , -- isRepeat - int
+	          'Sound 1' , -- Sound - varchar(30)
+	          'remind afternoon' , -- Label - varchar(50)
+	          0  -- isActivate - bit
+	        )
+
 SELECT * FROM dbo.RECIPE
+
+SELECT MedID ,
+       MedName ,
+       MedPrice ,
+       MedUnit ,
+       MedClassID ,
+       ClassName 
+FROM dbo.MEDICINE JOIN dbo.CLASSFICATION ON ClassID = MedClassID
+
+SELECT * FROM dbo.MEDICAL_RECORD_DETAILS
+
+SELECT * FROM dbo.REPEAT_CATEGORY
