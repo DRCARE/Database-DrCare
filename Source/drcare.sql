@@ -144,7 +144,7 @@ CREATE TABLE PRESCRIPTION
 (
 	MecRcDtID int NOT NULL,
 	MedID int NOT NULL,
-	MedQty smallint,
+	MedQty FLOAT, -- số lượng thuốc uống 1 lần
 	isMorn bit DEFAULT 0,
 	isNoon bit DEFAULT 0,
 	isAftNoon bit DEFAULT 0,

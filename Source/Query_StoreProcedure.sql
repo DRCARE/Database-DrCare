@@ -49,24 +49,43 @@ GO
 CREATE PROCEDURE sp_PRESCRIPTION_AddNewIncription
 	@MecRcDtID AS INT,
 	@MedID AS INT,
-	@MedQty AS INT,
-	@isMorn AS BIT = NULL,
-	@isNoon AS BIT = NULL,
-	@isAftNoon AS BIT = NULL,
-	@DayQty AS SMALLINT
+	@MedQty AS FLOAT,
+	@TimeTakeMedicine SMALLINT,
+	@SumMedQty AS SMALLINT
 AS
 BEGIN
+	DECLARE @isMorn BIT, @isNoon AS BIT, @isAftNoon AS BIT
+		 SET @isMorn = NULL
+		 SET @isNoon = NULL
+		 SET @isAftNoon = NULL
+		 IF(@TimeTakeMedicine = 3)
+				BEGIN
+					SET @isNoon = 1 
+					SET @isMorn = 1
+					SET @isAftNoon = 1
+				end
+		ELSE
+			IF(@TimeTakeMedicine = 2)
+			BEGIN
+				SET @isMorn = 1
+				SET @isAftNoon = 1
+			END
+            ELSE  --@TimeTakeMedicine = 1
+				SET @isNoon = 1 
+	DECLARE @DayQty SMALLINT
+	SET @DayQty = @SumMedQty / (@TimeTakeMedicine * @MedQty)
+
 	BEGIN TRANSACTION;
 	BEGIN TRY
 		IF (SELECT isTaken FROM dbo.MEDICAL_RECORD_DETAILS WHERE MecRcDetailsID = @MecRcDtID) = 0
 			UPDATE dbo.MEDICAL_RECORD_DETAILS
 			SET isTaken = 1
 			WHERE MecRcDetailsID = @MecRcDtID
-		 
+	
 		INSERT INTO dbo.PRESCRIPTION
 	        ( MecRcDtID ,
 	          MedID ,
-	          MedQty ,
+	          MedQty,
 	          isMorn ,
 	          isNoon ,
 	          isAftNoon ,
@@ -107,7 +126,7 @@ GO
 CREATE PROCEDURE sp_Get_Search_MedicalRecordDetails
     @MecRcID AS INT = NULL,
 	@DoctorID AS INT = NULL,
-	@DayCreated AS DATE = NULL
+	@DayCreated AS VARCHAR(15) = NULL
 AS    
 BEGIN	
 	IF @MecRcID IS NOT NULL
@@ -116,22 +135,30 @@ BEGIN
 				SELECT MR.MecRcDetailsID ,
 						mr.MecRcID,
                        MR.DiseaseID ,
+					   D.DiseName AS 'DISEASE NAME',
                        MR.DoctorID ,
+					   US.UserName AS 'Doctor Name',
                        MR.Symptoms ,
-                       CONVERT(VARCHAR(10),MR.DayCreated,103) ,
+                       CONVERT(VARCHAR(10),MR.DayCreated,103) AS 'Day Created' ,
 					   MR.isTaken
-				FROM dbo.MEDICAL_RECORD_DETAILS MR JOIN dbo.USER_DrCare US ON mr.MecRcID = US.UserID
-				WHERE MR.MecRcID = @MecRcID AND MR.DayCreated = @DayCreated
+				FROM dbo.MEDICAL_RECORD_DETAILS MR JOIN dbo.USER_DrCare US ON mr.DoctorID = US.UserID
+					JOIN dbo.DISEASE D ON d.DiseaseID = MR.DiseaseID 
+				WHERE MR.MecRcID = @MecRcID 				
+						AND CONVERT(VARCHAR(10),MR.DayCreated,103) = @DayCreated 
 				ORDER BY MR.DayCreated DESC
+
 			ELSE
 				SELECT MR.MecRcDetailsID ,
 						mr.MecRcID,
                        MR.DiseaseID ,
+					   D.DiseName AS 'DISEASE NAME',
                        MR.DoctorID ,
+					   US.UserName AS 'Doctor Name',
                        MR.Symptoms ,
-                       CONVERT(VARCHAR(10),MR.DayCreated,103) ,
-					   MR.isTaken 
-				FROM dbo.MEDICAL_RECORD_DETAILS MR JOIN dbo.USER_DrCare US ON mr.MecRcID = US.UserID
+                       CONVERT(VARCHAR(10),MR.DayCreated,103) AS 'Day Created' ,
+					   MR.isTaken
+				FROM dbo.MEDICAL_RECORD_DETAILS MR JOIN dbo.USER_DrCare US ON mr.DoctorID = US.UserID
+					JOIN dbo.DISEASE D ON d.DiseaseID = MR.DiseaseID
 				WHERE MR.MecRcID = @MecRcID 				
 				ORDER BY MR.DayCreated DESC
         END
@@ -140,17 +167,20 @@ BEGIN
 		BEGIN
 			SELECT MR.MecRcDetailsID ,
 						mr.MecRcID,
+						US.UserName AS 'PATIENT NAME',
                        MR.DiseaseID ,
                        MR.DoctorID ,
                        MR.Symptoms ,
-                       CONVERT(VARCHAR(10),MR.DayCreated,103) ,
+                       CONVERT(VARCHAR(10),MR.DayCreated,103)  AS 'Day created',
 					   MR.isTaken
 				FROM dbo.MEDICAL_RECORD_DETAILS MR JOIN dbo.USER_DrCare US ON mr.MecRcID = US.UserID
-				WHERE MR.MecRcID = @DoctorID AND MR.DayCreated = @DayCreated
+				WHERE MR.DoctorID = @DoctorID AND CONVERT(VARCHAR(10),MR.DayCreated,103) = @DayCreated 
 				ORDER BY MR.DayCreated ASC
 		END
 END
 GO
+
+--DROP PROC dbo.sp_Get_Search_MedicalRecordDetails
 
 -- lấy LIST thuốc của Phiếu khám bệnh cụ thể
 CREATE PROCEDURE sp_getPrecriptionByMecRcDetailsID
@@ -158,7 +188,7 @@ CREATE PROCEDURE sp_getPrecriptionByMecRcDetailsID
 AS
     SELECT MR.MecRcDetailsID AS 'mã phiếu khám bệnh', 
                               MD.MedName AS 'Tên thuốc' ,
-                              PC.MedQty AS 'SL',
+                              PC.MedQty  AS 'SL thuốc/lần',
                               PC.isMorn AS 'Sáng',
                               PC.isNoon AS 'Trưa',
                               PC.isAftNoon AS 'Chiều',
@@ -250,49 +280,21 @@ GO
 
 /** THIẾU: GET/Add REPEAT TIME*/
 
+EXEC dbo.sp_getRemindListByMecRcDetailsID @MecRcDetailsID = 1  -- int
 
-EXEC dbo.sp_MEDICAL_RECORD_DETAILS_AddNewMedicalRecord @MecRcID = 11, -- int
-    @DiseaseID = 6, -- int
-    @DoctorID = 1 -- int
-EXEC dbo.sp_PRESCRIPTION_AddNewIncription @MecRcDtID = 1, -- int
-    @MedID = 6, -- int
-    @MedQty = 21, -- int
-    @isMorn = 1, -- bit
-    @isNoon = 1, -- bit
-    @isAftNoon = 1, -- bit
-    @DayQty = 7 -- bit
-EXEC dbo.sp_PRESCRIPTION_AddNewIncription @MecRcDtID = 1, -- int
-    @MedID = 3, -- int
-    @MedQty = 14, -- int
-    @isMorn = 1, -- bit
-    @isNoon = NULL, -- bit
-    @isAftNoon = 1, -- bit
-    @DayQty = 7 -- bit
-EXEC dbo.sp_PRESCRIPTION_AddNewIncription @MecRcDtID = 1, -- int
-    @MedID = 12, -- int
-    @MedQty = 14, -- int
-    @isMorn = 1, -- bit
-    @isNoon = NULL, -- bit
-    @isAftNoon = 1, -- bit
-    @DayQty = 7 -- bit
+-- add remind
+EXEC dbo.sp_REMIND_RemindDetails_AddNewRemind @MecRcDtID = 2, -- int
+    @remindID = NULL, -- int
+    @TimeRemind = '6:00', -- time(7)
+    @isRepeat = 0, -- int
+    @sound = '', -- varchar(30)
+    @label = '', -- varchar(30)
+    @isActivate = NULL -- bit
 
-EXEC dbo.sp_PRESCRIPTION_AddNewIncription @MecRcDtID = 2, -- int
-    @MedID = 9, -- int
-    @MedQty = 12, -- int
-    @isMorn = 1, -- bit
-    @isNoon = NULL, -- bit
-    @isAftNoon = 1, -- bit
-    @DayQty = 6 -- smallint
-
-EXEC dbo.sp_PRESCRIPTION_AddNewIncription @MecRcDtID = 2, -- int
-    @MedID = 14, -- int
-    @MedQty = 6, -- int
-    @isMorn = NULL, -- bit
-    @isNoon = 1, -- bit
-    @isAftNoon = NULL, -- bit
-    @DayQty = 6 -- smallint
-
-GO
+-- GET METHOD
+EXEC dbo.sp_Get_Search_MedicalRecordDetails @MecRcID = NULL, -- int
+    @DoctorID = 4, -- int
+    @DayCreated = '24/07/2017' -- VARCHAR(15)
 
 EXEC dbo.sp_getPrecriptionByMecRcDetailsID @MecRcDtID = 2 -- int
 GO
@@ -302,11 +304,64 @@ GO
 --DROP PROCEDURE dbo.sp_PRESCRIPTION_AddNewIncription
 SELECT * FROM dbo.USER_DrCare
 SELECT * FROM dbo.DISEASE
-SELECT * FROM dbo.USER_DrCare
-SELECT * FROM dbo.DISEASE
+
 SELECT * FROM dbo.MEDICAL_RECORD_DETAILS
 SELECT * FROM dbo.PRESCRIPTION
 GO
+
+-- addd precription
+EXEC dbo.sp_PRESCRIPTION_AddNewIncription @MecRcDtID = 1, -- int
+    @MedID = 6, -- int
+    @MedQty = 1.0, -- float
+    @TimeTakeMedicine = 3, -- smallint
+    @SumMedQty = 21 -- smallint
+
+
+EXEC dbo.sp_PRESCRIPTION_AddNewIncription @MecRcDtID = 1, -- int
+    @MedID = 3, -- int
+    @MedQty = 1.0, -- float
+    @TimeTakeMedicine = 2, -- smallint
+    @SumMedQty = 14 -- smallint
+
+
+EXEC dbo.sp_PRESCRIPTION_AddNewIncription @MecRcDtID = 1, -- int
+    @MedID = 12, -- int
+    @MedQty = 1.0, -- float
+    @TimeTakeMedicine = 2, -- smallint
+    @SumMedQty = 14 -- smallint
+
+
+EXEC dbo.sp_PRESCRIPTION_AddNewIncription @MecRcDtID = 2, -- int
+    @MedID = 9, -- int
+    @MedQty = 1.0, -- float
+    @TimeTakeMedicine = 2, -- smallint
+    @SumMedQty = 12 -- smallint
+
+
+EXEC dbo.sp_PRESCRIPTION_AddNewIncription @MecRcDtID = 2, -- int
+    @MedID = 14, -- int
+    @MedQty = 1.0, -- float
+    @TimeTakeMedicine = 1, -- smallint
+    @SumMedQty = 6 -- smallint
+GO
+
+-- ADD MEDICAL_RECORD
+EXEC dbo.sp_MEDICAL_RECORD_DETAILS_AddNewMedicalRecord @MecRcID = 11, -- int
+    @DiseaseID = 6, -- int
+    @DoctorID = 1 -- int
+
+EXEC dbo.sp_MEDICAL_RECORD_DETAILS_AddNewMedicalRecord @MecRcID = 10, -- int
+    @DiseaseID = 2, -- int
+    @DoctorID = 4 -- int
+
+EXEC dbo.sp_MEDICAL_RECORD_DETAILS_AddNewMedicalRecord @MecRcID = 9, -- int
+    @DiseaseID = 4, -- int
+    @DoctorID = 4 -- int
+GO
+
+EXEC dbo.sp_getPrecriptionByMecRcDetailsID @MecRcDtID = 2 -- int
+GO
+
 
 -- TRANSACTION
 --BEGIN TRANSACTION;
@@ -330,3 +385,4 @@ GO
 --IF @@TRANCOUNT > 0
 --	COMMIT TRANSACTION;
 --GO
+
