@@ -71,11 +71,11 @@ CREATE TABLE REPEAT_CATEGORY
 CREATE TABLE REMIND
 (
 	RemindID int IDENTITY(1,1) NOT NULL,
-	TimeRemind time NOT NULL DEFAULT CONVERT (time, GETDATE()),
+	TimeRemind varchar(6) NOT NULL,
 	isRepeat int NOT NULL,
 	Sound varchar(30),
-	Label varchar(50),
-	isActivate BIT DEFAULT 1,
+	Label varchar(100),
+	isActivate BIT DEFAULT 0,
 	CONSTRAINT pk_remindID PRIMARY KEY (RemindID),
 	CONSTRAINT fk_Remind_isRepeat FOREIGN KEY (isRepeat)
 		REFERENCES REPEAT_CATEGORY(RepeatID)

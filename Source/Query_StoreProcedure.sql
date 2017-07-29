@@ -45,6 +45,66 @@ BEGIN
 END
 GO
 
+--thêm cho REMIND
+CREATE PROCEDURE sp_REMIND_AddNewRemind
+	@timeRemind AS VARCHAR(6),
+	@Label AS varchar(100) = NULL,
+AS
+    INSERT INTO dbo.REMIND
+            ( TimeRemind ,
+              isRepeat ,
+              Sound ,
+              Label ,
+              isActivate
+            )
+    VALUES  ( @timeRemind , -- TimeRemind - varchar(6)
+              0 , -- isRepeat - int
+              '' , -- Sound - varchar(30)
+              @Label , -- Label - varchar(100)
+              1  -- isActivate - bit
+            )
+GO
+
+--update cho Remind
+CREATE PROCEDURE sp_REMIND_AddNewRemind
+	@RemindID int IDENTITY(1,1) DEFAULT NULL,
+	@TimeRemind varchar(6) NOT NULL,
+	@isRepeat int NOT NULL,
+	@Sound varchar(30),
+	@Label varchar(100),
+	@isActivate BIT DEFAULT 1,
+AS
+	Declare @SQLQuery AS NVarchar(4000)
+    Declare @ParamDefinition AS NVarchar(2000) 
+
+	If @RemindID Is Not Null
+	BEGIN
+		SET @SQLQuery ='UPDATE dbo.REMIND
+						SET TimeRemind = @timeRemind , -- TimeRemind - varchar(6)
+							isRepeat = @isRepeat , -- isRepeat - int
+							Sound = @Sound , -- Sound - varchar(30)
+							Label = @Label , -- Label - varchar(100)
+							isActivate = @isActivate  -- isActivate - bit
+						WHERE RemindID = @RemindID;'
+	Set @ParamDefinition = '@RemindID int IDENTITY(1,1) DEFAULT NULL,
+							@TimeRemind varchar(6) NOT NULL,
+							@isRepeat int NOT NULL,
+							@Sound varchar(30),
+							@Label varchar(100),
+							@isActivate BIT DEFAULT 0'
+	EXECUTE sp_executesql @SQLQuery, 
+						@ParamDefinition, 
+						@RemindID ,
+						@TimeRemind ,
+						@isRepeat ,
+						@Sound ,
+						@Label ,
+						@isActivate
+	END
+	ELSE
+		RETURN("ERROR") -- Báo sai khi ko có ID
+GO
+
 -- thêm 1 dòng thuốc vào Đơn thuốc
 CREATE PROCEDURE sp_PRESCRIPTION_AddNewIncription
 	@MecRcDtID AS INT,
@@ -55,23 +115,23 @@ CREATE PROCEDURE sp_PRESCRIPTION_AddNewIncription
 AS
 BEGIN
 	DECLARE @isMorn BIT, @isNoon AS BIT, @isAftNoon AS BIT
-		 SET @isMorn = NULL
-		 SET @isNoon = NULL
-		 SET @isAftNoon = NULL
-		 IF(@TimeTakeMedicine = 3)
-				BEGIN
-					SET @isNoon = 1 
-					SET @isMorn = 1
-					SET @isAftNoon = 1
-				end
+		SET @isMorn = NULL
+		SET @isNoon = NULL
+		SET @isAftNoon = NULL
+		IF(@TimeTakeMedicine = 3)
+			BEGIN
+				EXECUTE sp_REMIND_AddNewRemind @timeRemind = 6, @Label = "Uong thuoc buoi sang!!!"
+				EXECUTE sp_REMIND_AddNewRemind @timeRemind = 12, @Label = "Uong thuoc buoi trua!!!"
+				EXECUTE sp_REMIND_AddNewRemind @timeRemind = 18, @Label = "Uong thuoc buoi toi!!!"
+			end
 		ELSE
 			IF(@TimeTakeMedicine = 2)
-			BEGIN
-				SET @isMorn = 1
-				SET @isAftNoon = 1
-			END
+				BEGIN
+					EXECUTE sp_REMIND_AddNewRemind @timeRemind = 6, @Label = "Uong thuoc buoi sang!!!"
+					EXECUTE sp_REMIND_AddNewRemind @timeRemind = 12, @Label = "Uong thuoc buoi trua!!!"
+				END
             ELSE  --@TimeTakeMedicine = 1
-				SET @isNoon = 1 
+				EXECUTE sp_REMIND_AddNewRemind @timeRemind = 6, @Label = "Uong thuoc buoi sang!!!"
 	DECLARE @DayQty SMALLINT
 	SET @DayQty = @SumMedQty / (@TimeTakeMedicine * @MedQty)
 
